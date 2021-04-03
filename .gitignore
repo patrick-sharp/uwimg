@@ -6,6 +6,7 @@
 .fuse*
 libuwimg*
 uwimg
+__pycache__/*
 
 # OS Generated #
 .DS_Store*
