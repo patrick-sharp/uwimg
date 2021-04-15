@@ -1,15 +1,6 @@
 #include <math.h>
 #include "image.h"
 
-// int roundUp(float f) {
-//     return f == 0.5 ? (int) ceil(f) : (int) round(f);
-// }
-
-float roundDown(float f)
-{
-    return f == 0.5 ? floor(f) : round(f);
-}
-
 float nn_interpolate(image im, float x, float y, int c)
 {
     return get_pixel(im, (int) round(x), (int) round(y), c);
