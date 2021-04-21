@@ -172,10 +172,26 @@ image make_emboss_filter()
 }
 
 // Question 2.2.1: Which of these filters should we use preserve when we run our convolution and which ones should we not? Why?
-// Answer: TODO
+// Answer: 
+// The highpass kernel finds edges, irrespective of what color those edges are. Preserve = 0 for the highpass filter.
+// Both the sharpen and emboss kernels are visual transformations of the image designed to alter it slightly, but 
+// still remain viewable as full-color images. Those filters should set preserve = 1.
 
 // Question 2.2.2: Do we have to do any post-processing for the above filters? Which ones and why?
-// Answer: TODO
+// Answer:
+// The kernel transformations to the image can result in values less than zero or greater than one.
+// For example, imagine that a portion of a black and white image looks like this:
+// 0 0 0
+// 0 1 0
+// 0 0 0
+// (maybe it's an image of the night sky or something and there's a white star on a pitch-black sky)
+// If we apply the sharpen kernel to this image, we get the following.
+// 0 0 0      0 -1  0      0 0 0
+// 0 1 0  *  -1  5 -1   =  0 5 0
+// 0 0 0      0 -1  0      0 0 0
+// This will result in an image with a value outside of our range of pixel values 0 to 1.
+// Since this sort of out-of-range value can occur when filtering images, we have to
+// clamp the image after applying the transformation.
 
 image make_gaussian_filter(float sigma)
 {
@@ -295,7 +311,6 @@ image *sobel_image(image im)
             float mag_v = sqrtf(Gx_v * Gx_v + Gy_v * Gy_v);
             set_pixel(mag, x, y, 0, mag_v);
 
-            // float dir_v = atanf(Gx_v == 0 ? 0.0 : (Gy_v / Gx_v));
             float dir_v = atan2f(Gy_v, Gx_v);
             set_pixel(dir, x, y, 0, dir_v);
         }
@@ -308,8 +323,11 @@ image colorize_sobel(image im)
     image *mag_dir = sobel_image(im);
     image mag = mag_dir[0];
     image dir = mag_dir[1];
+    image gauss_filter = make_gaussian_filter(10);
     feature_normalize(mag);
     feature_normalize(dir);
+    convolve_image(mag, gauss_filter, 1);
+    convolve_image(dir, gauss_filter, 1);
     image result = make_image(im.w, im.h, 3);
     for (int x = 0; x < im.w; x++) {
         for (int y = 0; y < im.h; y++) {
