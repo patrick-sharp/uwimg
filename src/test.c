@@ -321,6 +321,7 @@ void test_sharpen_filter(){
 void test_convolution(){
     image im = load_image("data/dog.jpg");
     image f = make_box_filter(7);
+
     image blur = convolve_image(im, f, 1);
     clamp_image(blur);
 
