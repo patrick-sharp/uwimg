@@ -62,7 +62,7 @@ image convolve_image(image im, image filter, int preserve)
     image convolved;
     if (im.c == filter.c) {
         if (preserve == 1) {
-                        convolved = make_image(im.w, im.h, im.c);       
+            convolved = make_image(im.w, im.h, im.c);       
             for (int im_x = 0; im_x < im.w; im_x++) {
                 for (int im_y = 0; im_y < im.h; im_y++) {
                     for (int im_c = 0; im_c < im.c; im_c++) {
@@ -79,7 +79,7 @@ image convolve_image(image im, image filter, int preserve)
                 }
             }
         } else {
-                        convolved = make_image(im.w, im.h, 1);
+            convolved = make_image(im.w, im.h, 1);
             for (int im_x = 0; im_x < im.w; im_x++) {
                 for (int im_y = 0; im_y < im.h; im_y++) {
                     float weighted_sum = 0.0;

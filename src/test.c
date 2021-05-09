@@ -811,7 +811,7 @@ void test_velocity_image()
 void test_hw4()
 {
     test_integral_image();
-    test_exact_box_filter_image();
+    // test_exact_box_filter_image();
     test_good_enough_box_filter_image();
     test_structure_image();
     test_velocity_image();

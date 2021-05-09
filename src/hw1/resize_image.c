@@ -31,6 +31,9 @@ float bilinear_interpolate(image im, float x, float y, int c)
     float d3 = y - fly;
     float d4 = ceil(y) - y;
 
+    if (d2 == 0.0) d2 = 1.0;
+    if (d4 == 0.0) d4 = 1.0;
+
     int i_flx = (int) flx;
     int i_fly = (int) fly;
 

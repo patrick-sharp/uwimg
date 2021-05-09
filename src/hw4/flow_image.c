@@ -48,6 +48,17 @@ image make_integral_image(image im)
 {
     image integ = make_image(im.w, im.h, im.c);
     // TODO: fill in the integral image
+    for (int c = 0; c < im.c; c++) {
+        for (int x = 0; x < im.w; x++) {
+            for (int y = 0; y < im.h; y++) {
+                float pixel = get_pixel(im, x, y, c);
+                float left = x > 0 ? get_pixel(integ, x - 1, y, c) : 0.0;
+                float up = y > 0 ? get_pixel(integ, x, y - 1, c) : 0.0;
+                float upper_left = x > 0 && y > 0 ? get_pixel(integ, x - 1, y - 1, c) : 0.0;
+                set_pixel(integ, x, y, c, pixel + up + left - upper_left);
+            }
+        }
+    }
     return integ;
 }
 
@@ -57,10 +68,58 @@ image make_integral_image(image im)
 // returns: smoothed image
 image box_filter_image(image im, int s)
 {
-    int i,j,k;
     image integ = make_integral_image(im);
     image S = make_image(im.w, im.h, im.c);
     // TODO: fill in S using the integral image.
+    for (int c = 0; c < im.c; c++) {
+        for (int x = 0; x < im.w; x++) {
+            for (int y = 0; y < im.h; y++) {
+                int x_left = x - s / 2 - 1;
+                int x_right = MIN(x + s / 2, im.w - 1);
+                int y_up = y - s / 2 - 1;
+                int y_down = MIN(y + s / 2, im.h - 1);
+
+                float upper_left;
+                float upper_right;
+                float lower_left;
+                float lower_right;
+
+                int width;
+                int height;
+
+                if (x_left < 0 && y_up < 0) {
+                    upper_left = 0.0;
+                    upper_right = 0.0;
+                    lower_left = 0.0;
+                    lower_right = get_pixel(integ, x_right, y_down, c);
+                    width = x_right + 1;
+                    height = y_down + 1;
+                } else if (x_left < 0) {
+                    upper_left = 0.0;
+                    upper_right = get_pixel(integ, x_right, y_up, c);
+                    lower_left = 0.0;
+                    lower_right = get_pixel(integ, x_right, y_down, c);
+                    width = x_right + 1;
+                    height = y_down - y_up;
+                } else if (y_up < 0) {
+                    upper_left = 0.0;
+                    upper_right = 0.0;
+                    lower_left = get_pixel(integ, x_left, y_down, c);
+                    lower_right = get_pixel(integ, x_right, y_down, c);
+                    width = x_right - x_left;
+                    height = y_down + 1;
+                } else {
+                    upper_left = get_pixel(integ, x_left, y_up, c);
+                    upper_right = get_pixel(integ, x_right, y_up, c);
+                    lower_left = get_pixel(integ, x_left, y_down, c);
+                    lower_right = get_pixel(integ, x_right, y_down, c);
+                    width = x_right - x_left;
+                    height = y_down - y_up;
+                }
+                set_pixel(S, x, y, c, (lower_right - lower_left - upper_right + upper_left) / (width * height));
+            }
+        }
+    }
     return S;
 }
 
@@ -82,7 +141,24 @@ image time_structure_matrix(image im, image prev, int s)
 
     // TODO: calculate gradients, structure components, and smooth them
 
-    image S;
+    image S = make_image(im.w, im.h, 5);
+    image Gx = convolve_image(im, make_gx_filter(), 0);
+    image Gy = convolve_image(im, make_gy_filter(), 0);
+    image Gt = sub_image(im, prev);
+
+    for (i = 0; i < im.w * im.h; i++) {
+        float Ix = Gx.data[i];
+        float Iy = Gy.data[i];
+        float It = Gt.data[i];
+        S.data[i + 0 * im.w * im.h] = Ix * Ix;
+        S.data[i + 1 * im.w * im.h] = Iy * Iy;
+        S.data[i + 2 * im.w * im.h] = Ix * Iy;
+        S.data[i + 3 * im.w * im.h] = Ix * It;
+        S.data[i + 4 * im.w * im.h] = Iy * It;
+    }
+    image temp = S;
+    S = box_filter_image(S, s);
+    free_image(temp);
 
     if(converted){
         free_image(im); free_image(prev);
@@ -107,11 +183,17 @@ image velocity_image(image S, int stride)
             float Iyt = S.data[i + S.w*j + 4*S.w*S.h];
 
             // TODO: calculate vx and vy using the flow equation
-            float vx = 0;
-            float vy = 0;
-
+            M.data[0][0] = Ixx;
+            M.data[0][1] = Ixy;
+            M.data[1][0] = Ixy;
+            M.data[1][1] = Iyy;
+            matrix Minv = matrix_invert(M);
+            float vx = Minv.data[0][0] * -Ixt + Minv.data[0][1] * -Iyt;
+            float vy = Minv.data[1][0] * -Ixt + Minv.data[1][1] * -Iyt;
+            
             set_pixel(v, i/stride, j/stride, 0, vx);
             set_pixel(v, i/stride, j/stride, 1, vy);
+            free_matrix(Minv);
         }
     }
     free_matrix(M);

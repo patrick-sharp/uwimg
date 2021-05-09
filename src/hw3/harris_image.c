@@ -113,7 +113,18 @@ image smooth_image(image im, float sigma)
 image structure_matrix(image im, float sigma)
 {
     image S = make_image(im.w, im.h, 3);
-    // TODO: calculate structure matrix for im.
+    image Gx = convolve_image(im, make_gx_filter(), 0);
+    image Gy = convolve_image(im, make_gy_filter(), 0);
+    for (int x = 0; x < im.w; x++) {
+        for (int y = 0; y < im.h; y++) {
+            float Ix = get_pixel(Gx, x, y, 0);
+            float Iy = get_pixel(Gy, x, y, 0);
+            set_pixel(S, x, y, 0, Ix * Ix);
+            set_pixel(S, x, y, 1, Iy * Iy);
+            set_pixel(S, x, y, 2, Ix * Iy);
+        }
+    }
+    S = convolve_image(S, make_gaussian_filter(sigma), 1);
     return S;
 }
 
@@ -123,8 +134,18 @@ image structure_matrix(image im, float sigma)
 image cornerness_response(image S)
 {
     image R = make_image(S.w, S.h, 1);
-    // TODO: fill in R, "cornerness" for each pixel using the structure matrix.
     // We'll use formulation det(S) - alpha * trace(S)^2, alpha = .06.
+    for (int x = 0; x < R.w; x++) {
+        for (int y = 0; y < R.h; y++) {
+            float a = get_pixel(S, x, y, 0);
+            float b = get_pixel(S, x, y, 2);
+            float c = b;
+            float d = get_pixel(S, x, y, 1);
+            float det = a * d - b * c;
+            float trace = a + d;
+            set_pixel(R, x, y, 0, det - 0.06 * trace * trace);
+        }
+    }
     return R;
 }
 
@@ -135,11 +156,32 @@ image cornerness_response(image S)
 image nms_image(image im, int w)
 {
     image r = copy_image(im);
-    // TODO: perform NMS on the response map.
     // for every pixel in the image:
     //     for neighbors within w:
     //         if neighbor response greater than pixel response:
     //             set response to be very low (I use -999999 [why not 0??])
+    for (int x = 0; x < r.w; x++) {
+        for (int y = 0; y < r.h; y++) {
+            float pixel = get_pixel(r, x, y, 0);
+            int broken = 0;
+            for (int subx = x - w; subx <= x + w; subx++) {
+                for (int suby = y - w; suby <= y + w; suby++) {
+                    if (subx == x && suby == y) {
+                        continue;
+                    }
+                    float neighbor = get_pixel(r, subx, suby, 0);
+                    if (pixel < neighbor) {
+                        set_pixel(r, x, y, 0, -999999.0);
+                        broken = 1;
+                        break;
+                    }
+                }
+                if (broken == 1) {
+                    break;
+                }
+            }
+        }
+    }
     return r;
 }
 
@@ -163,13 +205,47 @@ descriptor *harris_corner_detector(image im, float sigma, float thresh, int nms,
 
 
     //TODO: count number of responses over threshold
-    int count = 1; // change this
+    int count = 0;
+    // for (int i = 0; i < Rnms.w * Rnms.h; i++) {
+    //     count += Rnms.data[i] > thresh ? 1 : 0;
+    // }
+    for (int x = 0; x < Rnms.w; x++) {
+        for (int y = 0; y < Rnms.h; y++) {
+            if (get_pixel(Rnms, x, y, 0) > thresh) {
+                count++;
+            }
+        }
+    }
 
     
     *n = count; // <- set *n equal to number of corners in image.
     descriptor *d = calloc(count, sizeof(descriptor));
     //TODO: fill in array *d with descriptors of corners, use describe_index.
-
+    int descriptor_count = 0;
+    // for (int x = 0; x < Rnms.w; x++) {
+    //     int broken = 0;
+    //     for (int y = 0; y < Rnms.h; y++) {
+    //         if (get_pixel(Rnms, x, y, 0) > thresh) {
+    //             d[descriptor_count] = describe_index(im, Rnms.w * y + x);
+    //             descriptor_count++;
+    //         }
+    //         if (descriptor_count == count) {
+    //             break;
+    //         }
+    //     }
+    //     if (broken == 1) {
+    //         break;
+    //     }
+    // }
+    for (int i = 0; i < Rnms.w * Rnms.h; i++) {
+        if (Rnms.data[i] > thresh) {
+            d[descriptor_count] = describe_index(im, i);
+            descriptor_count++;
+        }
+        if (descriptor_count == count) {
+            break;
+        }
+    }
 
     free_image(S);
     free_image(R);

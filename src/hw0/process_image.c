@@ -25,7 +25,7 @@ float get_pixel(image im, int x, int y, int c)
 
 void set_pixel(image im, int x, int y, int c, float v)
 {
-    if (x > im.w || x < 0 || y > im.h || y < 0 || c > im.c || c < 0) {
+    if (x >= im.w || x < 0 || y >= im.h || y < 0 || c >= im.c || c < 0) {
         return;
     }
     im.data[get_index(im, x, y, c)] = v;
