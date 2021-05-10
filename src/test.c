@@ -64,7 +64,10 @@ int same_matrix(matrix m, matrix n)
     int i,j;
     for(i = 0; i < m.rows; ++i){
         for(j = 0; j < m.cols; ++j){
-            if(!within_eps(m.data[i][j], n.data[i][j], EPS)) return 0;
+            if(!within_eps(m.data[i][j], n.data[i][j], EPS)) {
+                printf("Value at row %d, col %d is %f but should be %f\n", i, j, n.data[i][j], m.data[i][j]);
+                return 0;
+            }
         }
     }
     return 1;
